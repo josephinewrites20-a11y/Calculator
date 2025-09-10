@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ancillary Revenue Calculator</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
+    .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #2c3e50; }
+    label { font-weight: bold; display: block; margin-top: 10px; }
+    input, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; }
+    button { margin-top: 15px; padding: 10px 15px; border: none; border-radius: 8px; cursor: pointer; }
+    .primary { background-color: #007BFF; color: white; }
+    .secondary { background-color: #28a745; color: white; margin-left: 10px; }
+    .results { background: #eef; padding: 15px; border-radius: 8px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ancillary Revenue Calculator</h1>
+    <form id="calcForm">
+      <label>Property Type</label>
+      <select id="propertyType">
+        <option>Office</option>
+        <option>Multifamily</option>
+        <option>Retail</option>
+        <option>Mixed-use</option>
+      </select>
+
+      <label>Location</label>
+      <select id="location">
+        <option value="16.28">New York (avg $16.28/sf)</option>
+        <option value="12.50">Los Angeles (avg $12.50/sf)</option>
+        <option value="10.00">Chicago (avg $10.00/sf)</option>
+        <option value="8.75">Houston (avg $8.75/sf)</option>
+      </select>
+
+      <label>Or enter custom $/sf</label>
+      <input type="number" id="customRate" placeholder="Enter your own $/sf" />
+
+      <label>Available Unused Space (sq. ft.)</label>
+      <input type="number" id="unusedSpace" required />
+
+      <label>Vacancy Duration (months/year)</label>
+      <input type="number" id="vacancyDuration" value="12" required />
+
+      <label>Estimated Tenant Capture Rate (%)</label>
+      <input type="number" id="captureRate" value="50" />
+
+      <button type="button" class="primary" onclick="calculateRevenue()">Calculate</button>
+    </form>
+
+    <div id="results" class="results" style="display:none;">
+      <h3>Results</h3>
+      <p id="monthlyRevenue"></p>
+      <p id="annualRevenue"></p>
+      <p id="noiUplift"></p>
+      <p id="breakEven"></p>
+      <button class="secondary" onclick="showEmailForm()">Download My Report</button>
+      <a href="https://www.stufstorage.com/contact" target="_blank">
+        <button class="primary">Talk to Stuf</button>
+      </a>
+    </div>
+
+    <div id="emailForm" style="display:none; margin-top:20px;">
+      <label>Enter your email to receive the PDF report</label>
+      <input type="email" id="email" placeholder="your@email.com" />
+      <button class="secondary" onclick="downloadPDF()">Submit & Download</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    let calcData = {};
+
+    function calculateRevenue() {
+      const unusedSpace = parseFloat(document.getElementById('unusedSpace').value) || 0;
+      const vacancyDuration = parseFloat(document.getElementById('vacancyDuration').value) || 12;
+      const captureRate = parseFloat(document.getElementById('captureRate').value) / 100 || 0.5;
+
+      let rentRate = parseFloat(document.getElementById('customRate').value);
+      if (isNaN(rentRate) || rentRate <= 0) {
+        rentRate = parseFloat(document.getElementById('location').value);
+      }
+
+      const effectiveSqFt = unusedSpace * captureRate;
+      const annualRevenue = effectiveSqFt * rentRate;
+      const monthlyRevenue = annualRevenue / 12;
+      const noiUplift = (annualRevenue / (unusedSpace * rentRate)) * 100;
+      const breakEven = (1000 / monthlyRevenue).toFixed(1);
+
+      document.getElementById('monthlyRevenue').innerText = "Monthly Revenue: $" + monthlyRevenue.toFixed(2);
+      document.getElementById('annualRevenue').innerText = "Annual Revenue: $" + annualRevenue.toFixed(2);
+      document.getElementById('noiUplift').innerText = "NOI Uplift: " + noiUplift.toFixed(1) + "%";
+      document.getElementById('breakEven').innerText = "Break-even Period: " + breakEven + " months";
+
+      document.getElementById('results').style.display = 'block';
+
+      calcData = { monthlyRevenue, annualRevenue, noiUplift, breakEven };
+    }
+
+    function showEmailForm() {
+      document.getElementById('emailForm').style.display = 'block';
+    }
+
+    async function downloadPDF() {
+      const email = document.getElementById('email').value;
+      if (!email) { alert("Please enter your email"); return; }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Ancillary Revenue Report", 10, 10);
+      doc.text("Email: " + email, 10, 20);
+      doc.text("Monthly Revenue: $" + calcData.monthlyRevenue.toFixed(2), 10, 40);
+      doc.text("Annual Revenue: $" + calcData.annualRevenue.toFixed(2), 10, 50);
+      doc.text("NOI Uplift: " + calcData.noiUplift.toFixed(1) + "%", 10, 60);
+      doc.text("Break-even Period: " + calcData.breakEven + " months", 10, 70);
+      doc.save("Ancillary_Revenue_Report.pdf");
+    }
+  </script>
+</body>
+</html>
